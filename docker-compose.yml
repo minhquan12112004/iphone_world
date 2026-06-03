@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  fastapi_web:
+    build: .
+    container_name: fastapi_web
+    depends_on:
+      - redis_cache
+      - odoo_db
+      - odoo_erp
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      - SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET}
+      - REDIS_URL=redis://redis_cache:6379/0
+      - ODOO_URL=http://odoo_erp:8069
+      - ODOO_DB=${ODOO_DB}
+      - ODOO_USERNAME=${ODOO_USERNAME}
+      - ODOO_PASSWORD=${ODOO_PASSWORD}
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./:/app
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+
+
+  redis_cache:
+    image: redis:7
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+  odoo_db:
+    image: postgres:15
+    restart: unless-stopped
+    ports:
+      - "5434:5432"
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: odoo
+      POSTGRES_PASSWORD: odoo
+    volumes:
+      - odoo-db-data:/var/lib/postgresql/data
+
+  odoo_erp:
+    image: odoo:17.0
+    restart: unless-stopped
+    depends_on:
+      - odoo_db
+    ports:
+      - "8069:8069"
+    environment:
+      - HOST=odoo_db
+      - USER=odoo
+      - PASSWORD=odoo
+    volumes:
+      - odoo-web-data:/var/lib/odoo
+      - ./custom_addons:/mnt/extra-addons
+
+volumes:
+  redis-data:
+  odoo-db-data:
+  odoo-web-data:
+
+networks:
+  default:
+    name: project_odoo_network
