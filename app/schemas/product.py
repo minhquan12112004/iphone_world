@@ -9,6 +9,7 @@ class ProductBase(BaseModel):
     stock_qty: int
     description: Optional[str] = None
 
+
 class ProductResponse(ProductBase):
     id: int
     created_at: datetime
